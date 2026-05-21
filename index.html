@@ -713,6 +713,42 @@ body {
   .tah-nominate-cta { flex-direction: column; }
   #tah-back-top { bottom: 18px; right: 14px; }
 }
+
+/* ── TECHNOVATION EXCLUSIVE SECTION ── */
+.tah-section.tah-exclusive {
+  background: linear-gradient(135deg, #FFF8F0 0%, #FFF0F5 100%);
+  border: 2px solid #F8BBD0;
+  border-radius: 16px;
+  padding: 20px 22px 10px;
+  margin-bottom: 38px;
+}
+.tah-section.tah-exclusive .tah-section-title {
+  color: var(--pink);
+  border-bottom-color: #F8BBD0;
+}
+.tah-exclusive-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--pink);
+  color: #fff;
+  font-size: 0.7em;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.03em;
+  font-family: 'DM Sans', sans-serif;
+}
+.tah-exclusive-intro {
+  font-size: 0.88em;
+  color: var(--slate-light);
+  margin-bottom: 16px;
+  line-height: 1.6;
+  padding: 10px 14px;
+  background: rgba(233,30,99,0.05);
+  border-radius: 8px;
+  border-left: 3px solid var(--pink);
+}
 </style>
 </head>
 <body>
@@ -809,6 +845,7 @@ body {
 <!-- SECTION JUMP NAV -->
 <div class="tah-jump-nav">
   <span class="tah-jump-label">Jump to:</span>
+  <a class="tah-jump-link" href="#sec-technovation">⭐ Technovation Exclusive</a>
   <a class="tah-jump-link" href="#sec-scholarships">🎓 Scholarships</a>
   <a class="tah-jump-link" href="#sec-fellowships">🌍 Fellowships</a>
   <a class="tah-jump-link" href="#sec-jobs">💼 Jobs</a>
@@ -837,6 +874,15 @@ body {
       <button class="tah-share-btn" id="tah-print-btn" title="Print or save as PDF" onclick="window.print()">🖨 Print / PDF</button>
     </div>
   </div>
+
+  <!-- ════ TECHNOVATION EXCLUSIVE ════ -->
+  <div class="tah-section tah-exclusive" id="sec-technovation" data-cat="technovation">
+    <h2 class="tah-section-title">⭐ Technovation Exclusive <span class="tah-exclusive-badge">HOSTED BY TECHNOVATION</span> <span class="tah-section-count" data-cat-count="technovation">0</span></h2>
+    <p class="tah-exclusive-intro">
+      Opportunities created, hosted, or co-sponsored directly by Technovation — available exclusively (or with priority access) to our alumnae community. These are yours first.
+    </p>
+
+  </div><!-- /technovation exclusive -->
 
   <!-- ════ SCHOLARSHIPS ════ -->
   <div class="tah-section" id="sec-scholarships" data-cat="scholarships">
