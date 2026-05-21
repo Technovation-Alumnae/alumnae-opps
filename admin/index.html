@@ -777,37 +777,53 @@ async function scanPage(){
   statusEl.innerHTML=`<span class="spin"></span>Fetching live page…`;
 
   try{
-    // Fetch live page
     const res=await fetch('https://technovation-alumnae.github.io/alumnae-opps/?nocache='+Date.now());
-    const html=await res.text();
+    const pageHtml=await res.text();
 
     statusEl.innerHTML=`<span class="spin"></span>Analyzing cards with Claude…`;
+
+    // Strip emoji and special chars from a string to make it JSON-safe
+    function stripEmoji(str){
+      return str.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27FF}]|[\u{2B00}-\u{2BFF}]|[\u{FE00}-\u{FEFF}]|[\u{1F900}-\u{1F9FF}]/gu,'').replace(/[^\x20-\x7E\xA0-\xFF]/g,'').trim();
+    }
 
     // Extract tah-item blocks with their titles and deadlines
     const itemRe=/<div class="tah-item"[^>]*data-deadline="([^"]*)"[^>]*>[\s\S]*?<div class="tah-title">([^<]+)<\/div>[\s\S]*?<span class="tah-pill[^"]*">([^<]+)<\/span>/g;
     const found=[];let m;
-    while((m=itemRe.exec(html))!==null){
-      found.push({deadline:m[1],title:m[2].trim(),timing:m[3].trim()});
+    while((m=itemRe.exec(pageHtml))!==null){
+      const rawTitle=m[2].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#[0-9]+;/g,'').trim();
+      const safeTitle=stripEmoji(rawTitle).replace(/"/g,"'").replace(/[\r\n]/g,' ').trim();
+      if(safeTitle.length>2) found.push({deadline:m[1],title:safeTitle,timing:stripEmoji(m[3]).trim(),idx:found.length});
     }
 
-    // Ask Claude to evaluate each
     const today=new Date().toISOString().split('T')[0];
-    const prompt=`Today is ${today}. I have a list of opportunities from a page. For each one, tell me if it's expired, closing soon, or fine. Return ONLY a JSON array:
-[{"title":"...","deadline_type":"...","timing":"...","status":"expired|soon|ok","reason":"brief reason"}]
+    // Send as numbered list instead of JSON to avoid escaping issues
+    const cardList=found.map((f,i)=>`${i}. title="${f.title}" | deadline_type=${f.deadline} | timing="${f.timing}"`).join('\n');
 
-Cards:
-${found.map(f=>`- "${f.title}" | deadline_type: ${f.deadline} | timing: "${f.timing}"`).join('\n')}
+    const prompt=`Today is ${today}. For each opportunity below, decide if it is expired, closing soon, or fine.
 
-Status rules: "expired" = the deadline has clearly passed (specific past date). "soon" = deadline within 14 days from today. "ok" = rolling, future, or no issue. Be conservative — only mark expired if the date is definitely past.`;
+Return ONLY a JSON array with one object per line — use only ASCII in string values, no emojis:
+[{"idx":0,"title":"...","status":"expired|soon|ok","reason":"brief reason"}]
 
-    const r=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+Rules: expired=deadline clearly passed. soon=deadline within 14 days of today. ok=rolling/future/no issue. Be conservative — only mark expired if certain.
+
+Opportunities:
+${cardList}`;
+
+    const r=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:3000,messages:[{role:'user',content:prompt}]})});
     const d=await r.json();
-    if(!d.content){
-      const errMsg=d.error?.message||JSON.stringify(d);
-      throw new Error('API error: '+errMsg);
-    }
-    const text=d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
-    scannedCards=JSON.parse(text);
+    if(!d.content){throw new Error(d.error?.message||JSON.stringify(d));}
+    let text=d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    // Strip any remaining non-ASCII from the JSON string before parsing
+    text=text.replace(/[^\x20-\x7E\[\]{}":,\n\r\t]/g,'');
+    const arrStart=text.indexOf('['); const arrEnd=text.lastIndexOf(']');
+    if(arrStart===-1) throw new Error('No results returned from Claude');
+    const results=JSON.parse(text.slice(arrStart,arrEnd+1));
+    // Merge results back with original titles (using idx or title match)
+    scannedCards=results.map(r=>{
+      const orig=found[r.idx]||found.find(f=>f.title.toLowerCase().includes((r.title||'').toLowerCase().slice(0,20)))||{};
+      return {...r, title: orig.title||r.title, timing: orig.timing||r.timing||''};
+    });
 
     // Count expired
     const expiredCount=scannedCards.filter(c=>c.status==='expired').length;
