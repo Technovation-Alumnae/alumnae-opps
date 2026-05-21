@@ -231,30 +231,6 @@ select[multiple]{height:auto}
       <label>Raw Info</label>
       <textarea id="ai-raw" placeholder="Paste whatever you have — an email, a Slack message, a LinkedIn post, a URL with a few notes. Claude will pull out all the details automatically."></textarea>
     </div>
-    <div class="grid2">
-      <div class="f">
-        <label>Section on the page</label>
-        <select id="ai-cat">
-          <option value="scholarships">🎓 Scholarships</option>
-          <option value="fellowships" selected>🌍 Fellowships & Research</option>
-          <option value="jobs">💼 Jobs & Career Platforms</option>
-          <option value="events">🏆 Events & Competitions</option>
-          <option value="courses">📚 Courses & Learning</option>
-          <option value="prodev">📈 Professional Development</option>
-          <option value="founders">🚀 Founders Hub</option>
-        </select>
-      </div>
-      <div class="f">
-        <label>Who it's for (Ctrl/Cmd = multi)</label>
-        <select id="ai-personas" multiple size="5">
-          <option value="all" selected>All Alumnae</option>
-          <option value="secondary">High School</option>
-          <option value="university">University</option>
-          <option value="earlycareer">Early Career</option>
-          <option value="founder">Founder/Builder</option>
-        </select>
-      </div>
-    </div>
     <div class="status-bar" id="ai-status"></div>
   </div>
 
@@ -273,6 +249,7 @@ select[multiple]{height:auto}
         <div class="f">
           <label>Section</label>
           <select id="f-cat">
+            <option value="technovation">⭐ Technovation Exclusive</option>
             <option value="scholarships">🎓 Scholarships</option>
             <option value="fellowships" selected>🌍 Fellowships & Research</option>
             <option value="jobs">💼 Jobs & Career Platforms</option>
@@ -447,18 +424,7 @@ select[multiple]{height:auto}
         <label>What to search for</label>
         <textarea id="search-prompt" style="min-height:60px" placeholder="e.g. 'new fellowships for women in AI and tech launching this summer' or 'scholarships for high school girls in STEM closing in the next 60 days' or 'hackathons open to international students in 2026'"></textarea>
       </div>
-      <div class="f">
-        <label>Section to add them to</label>
-        <select id="search-cat">
-          <option value="scholarships">🎓 Scholarships</option>
-          <option value="fellowships" selected>🌍 Fellowships & Research</option>
-          <option value="jobs">💼 Jobs & Career Platforms</option>
-          <option value="events">🏆 Events & Competitions</option>
-          <option value="courses">📚 Courses & Learning</option>
-          <option value="prodev">📈 Professional Development</option>
-          <option value="founders">🚀 Founders Hub</option>
-        </select>
-      </div>
+
       <div class="f">
         <label>How many to find</label>
         <select id="search-count">
@@ -605,7 +571,7 @@ function addRow(){
 }
 
 const SECTION_LABELS={
-  scholarships:'scholarships',fellowships:'fellowships / research opportunities',jobs:'jobs & career platforms',
+  technovation:'technovation exclusive (hosted by Technovation)',scholarships:'scholarships',fellowships:'fellowships / research opportunities',jobs:'jobs & career platforms',
   events:'events & competitions',courses:'courses & learning',prodev:'professional development',founders:'founders hub'
 };
 
@@ -698,8 +664,6 @@ async function aiGenerate(){
   if(!raw){alert('Paste some info first.');return;}
   const ant=getANT();
   if(!ant){alert('Add your Anthropic API key in ⚙️ Settings first.');switchTab('settings');return;}
-  const cat=document.getElementById('ai-cat').value;
-  const personas=getMulti('ai-personas');
   const btn=document.getElementById('ai-btn');
   const statusEl=document.getElementById('ai-status');
   btn.disabled=true;btn.textContent='Generating...';
@@ -707,9 +671,30 @@ async function aiGenerate(){
 
   const prompt=`You are building a card for the Technovation Alumnae Opportunities Hub. Extract structured data and return ONLY valid JSON (no markdown, no backticks):
 
-{"title":"Full opportunity title","deadline_type":"rolling|soon|urgent|future","timing_text":"Short pill text","location":"intl|us|us-online","url":"https://...","button_label":"Apply Now →","details":[{"emoji":"📅","label":"Deadline","value":"..."},{"emoji":"💰","label":"Award","value":"..."},{"emoji":"📍","label":"Location","value":"..."},{"emoji":"👥","label":"Eligibility","value":"..."},{"emoji":"🌟","label":"Why it matters","value":"..."}]}
+{"title":"Full opportunity title","section":"technovation|scholarships|fellowships|jobs|events|courses|prodev|founders","personas":"all|secondary|university|earlycareer|founder (space-separated, can combine e.g. \"university earlycareer\")","deadline_type":"rolling|soon|urgent|future","timing_text":"Short pill text","location":"intl|us|us-online","url":"https://...","button_label":"Apply Now →","details":[{"emoji":"📅","label":"Deadline","value":"..."},{"emoji":"💰","label":"Award","value":"..."},{"emoji":"📍","label":"Location","value":"..."},{"emoji":"👥","label":"Eligibility","value":"..."},{"emoji":"🌟","label":"Why it matters","value":"..."}]}
 
-Rules: deadline_type urgent=≤2wk, soon=≤1mo, future=fixed 1+mo, rolling=no deadline. location intl=global, us=US-only, us-online=US+online. Details 3–5 rows, 1–2 sentences each. button_label: "Apply Now →" for apps, "Learn More →" for info, "View Roles →" for jobs, "Enroll →" for courses. category: ${SECTION_LABELS[cat]} | personas: ${personas}
+Section rules — pick ONE:
+- technovation: hosted, created, or co-sponsored directly by Technovation (e.g. Technovation events, Technovation-run programs, exclusive alumnae programs)
+- scholarships: funding awarded for education
+- fellowships: fellowship, residency, research, or immersive programs
+- jobs: job boards, career platforms, open roles, internships
+- events: hackathons, competitions, conferences, pitch events
+- courses: online courses, bootcamps, certifications, learning programs
+- prodev: mentorship, networking, professional development, community membership
+- founders: grants, accelerators, pitch competitions, founder funding
+
+Personas rules — pick ALL that apply (space-separated):
+- all: open to everyone with no age/stage restriction
+- secondary: high school students
+- university: college/university students
+- earlycareer: recent grads, early-career professionals
+- founder: entrepreneurs, startup founders, builders
+If genuinely open to all stages, use "all". Otherwise be specific.
+
+Deadline rules: urgent=closes within 2 weeks, soon=closes within 1 month, future=fixed date more than 1 month away, rolling=no fixed deadline.
+Location: intl=international/global, us=US-only, us-online=US with online option.
+Details: 3–5 rows, 1–2 sentences each. Only include rows you have info for.
+Button label: "Apply Now →" for applications, "Learn More →" for info pages, "View Roles →" for job boards, "Enroll →" for courses, "Register →" for events.
 
 Raw info:\n${raw}`;
 
@@ -718,17 +703,23 @@ Raw info:\n${raw}`;
     const data=await res.json();
     const text=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
     const p=JSON.parse(text);
+    const cat=p.section||'fellowships';
+    const personas=p.personas||'all';
     const details=p.details||[];
     const cardHtml=buildCardHTML(p.title||'Untitled',cat,p.deadline_type||'rolling',p.timing_text||'Rolling',p.location||'intl',personas,p.url||'#',p.button_label||'Apply Now →',details,true,true,false);
     generatedCode=cardHtml;
     generatedCat=cat;
     generatedData={title:p.title,deadline:p.deadline_type,timing:p.timing_text,loc:p.location,personas,url:p.url,btnLabel:p.button_label,details,isNew:true,isPriority:true,isUrgent:false};
+    // Show what was auto-detected
+    const sectionNames={technovation:'⭐ Technovation Exclusive',scholarships:'🎓 Scholarships',fellowships:'🌍 Fellowships',jobs:'💼 Jobs',events:'🏆 Events',courses:'📚 Courses',prodev:'📈 Pro Dev',founders:'🚀 Founders Hub'};
+    statusEl.style.fontStyle='normal';
+    statusEl.innerHTML=`✅ Done! Placed in <strong>${sectionNames[cat]||cat}</strong> · Personas: <strong>${personas}</strong>`;
     document.getElementById('output-code').textContent=cardHtml;
     renderPreview(generatedData);
     document.getElementById('card-output').style.display='block';
     document.getElementById('push-steps').style.display='flex';
     setPS('idle','Ready to push');resetSteps('s');
-    statusEl.innerHTML='✅ Done!';statusEl.style.fontStyle='normal';
+    // status already set above
     document.getElementById('card-output').scrollIntoView({behavior:'smooth'});
     addToHistory(p.title||'Untitled',cat,p.deadline_type||'rolling',p.location||'intl',cardHtml);
   }catch(e){statusEl.innerHTML='❌ Error: '+e.message;console.error(e);}
@@ -821,7 +812,7 @@ function setPS(cls,msg,prefix='push'){
 // PUSH — Add Opps tab
 // ════════════════════════════════════════════
 const SECTION_ANCHORS={
-  scholarships:'data-cat="scholarships"',fellowships:'data-cat="fellowships"',jobs:'data-cat="jobs"',
+  technovation:'data-cat="technovation"',scholarships:'data-cat="scholarships"',fellowships:'data-cat="fellowships"',jobs:'data-cat="jobs"',
   events:'data-cat="events"',courses:'data-cat="courses"',prodev:'data-cat="prodev"',founders:'data-cat="founders"'
 };
 async function doPush(){
@@ -1044,7 +1035,6 @@ async function doSearch(){
   if(!ant){alert('Add your Anthropic API key in ⚙️ Settings.');switchTab('settings');return;}
   const userPrompt=document.getElementById('search-prompt').value.trim();
   if(!userPrompt){alert('Describe what to search for.');return;}
-  const cat=document.getElementById('search-cat').value;
   const count=parseInt(document.getElementById('search-count').value)||5;
   const btn=document.getElementById('search-btn');
   const statusEl=document.getElementById('search-status');
@@ -1060,8 +1050,10 @@ These are for Technovation alumnae — women and girls who participated in a glo
 - A mix of deadlines (urgent, soon, future, rolling)
 
 Return ONLY a JSON array of ${count} items (no markdown):
-[{"title":"...","deadline_type":"rolling|soon|urgent|future","timing_text":"...","location":"intl|us|us-online","url":"https://...","button_label":"Apply Now →","details":[{"emoji":"📅","label":"Deadline","value":"..."},{"emoji":"💰","label":"Award","value":"..."},{"emoji":"👥","label":"Eligibility","value":"..."},{"emoji":"🌟","label":"Why it matters","value":"..."}]}]
+[{"title":"...","section":"scholarships|fellowships|jobs|events|courses|prodev|founders","personas":"all|secondary|university|earlycareer|founder (space-separated)","deadline_type":"rolling|soon|urgent|future","timing_text":"...","location":"intl|us|us-online","url":"https://...","button_label":"Apply Now →","details":[{"emoji":"📅","label":"Deadline","value":"..."},{"emoji":"💰","label":"Award","value":"..."},{"emoji":"👥","label":"Eligibility","value":"..."},{"emoji":"🌟","label":"Why it matters","value":"..."}]}]
 
+Section rules: scholarships=education funding, fellowships=fellowship/residency/research programs, jobs=job boards/open roles/internships, events=hackathons/competitions/conferences, courses=online courses/bootcamps/certifications, prodev=mentorship/networking/professional dev, founders=grants/accelerators/pitch competitions.
+Personas: all=no restriction, secondary=high school, university=college students, earlycareer=recent grads/early professionals, founder=entrepreneurs. Use space-separated for multiple.
 Only include opps you are confident are real and currently active. Include accurate URLs.`;
 
   try{
@@ -1094,7 +1086,6 @@ Only include opps you are confident are real and currently active. Include accur
 
 function renderSearchCards(){
   const container=document.getElementById('search-cards');
-  const cat=document.getElementById('search-cat').value;
   container.innerHTML='';
   searchResults.forEach((opp,i)=>{
     const inQueue=searchQueue.some(q=>q.title===opp.title);
@@ -1111,15 +1102,16 @@ function renderSearchCards(){
         ${(opp.details||[]).slice(0,3).map(d=>`<div style="margin-bottom:3px"><strong>${esc(d.label)}:</strong> ${esc(d.value)}</div>`).join('')}
       </div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <button class="btn ${inQueue?'btn-outline':'btn-green'}" id="add-btn-${i}" onclick="toggleSearchQueue(${i},'${cat}')">${inQueue?'✓ Queued — remove':'＋ Add to push queue'}</button>
+        <button class="btn ${inQueue?'btn-outline':'btn-green'}" id="add-btn-${i}" onclick="toggleSearchQueue(${i})">${inQueue?'✓ Queued — remove':'＋ Add to push queue'}</button>
         <a href="${esc(opp.url)}" target="_blank" class="btn btn-outline" style="text-decoration:none;font-size:12.5px;padding:7px 14px">🔗 Verify URL</a>
       </div>`;
     container.appendChild(el);
   });
 }
 
-function toggleSearchQueue(i,cat){
+function toggleSearchQueue(i){
   const opp=searchResults[i];
+  const cat=opp.section||'fellowships';
   const already=searchQueue.findIndex(q=>q.title===opp.title);
   const details=opp.details||[];
   if(already>-1){
