@@ -191,6 +191,23 @@ select[multiple]{height:auto}
   .header{padding:16px 14px 14px}
   .tah-grid-prev{grid-template-columns:1fr}
 }
+
+/* CARD QUEUE */
+.queue-card{background:var(--card-bg);border:1px solid var(--warm-border);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.queue-card-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;gap:10px;cursor:pointer;user-select:none}
+.queue-card-header:hover{background:var(--warm-bg)}
+.queue-card-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.queue-card-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.queue-card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.queue-card-body{display:none;border-top:1px solid var(--warm-border);padding:14px 16px}
+.queue-card-body.open{display:block}
+.queue-card-details{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.queue-card-detail{font-size:12.5px;color:var(--text-soft);display:flex;gap:7px;line-height:1.5}
+.queue-card-detail strong{color:var(--text)}
+.queue-card-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--warm-border)}
+.queue-rm-btn{background:none;border:1px solid var(--warm-border2);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text-soft);font-family:inherit;margin-left:auto}
+.queue-rm-btn:hover{border-color:var(--red);color:var(--red)}
+.section-tag{font-size:10.5px;padding:2px 8px;border-radius:10px;font-weight:600;background:var(--purple-light);color:var(--purple);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -221,153 +238,50 @@ select[multiple]{height:auto}
 <div class="main">
 
 <!-- ══════════════════════════════════════════
-     TAB 1: ADD OPPS (paste raw → card → preview → push)
+     TAB 1: ADD OPPS
 ════════════════════════════════════════════ -->
 <div id="pane-add" class="pane active">
 
   <div class="fc">
-    <div class="fc-title">✨ Paste anything — email, Slack, LinkedIn post, URL, forwarded notes</div>
-    <div class="f full" style="margin-bottom:12px">
-      <label>Raw Info</label>
-      <textarea id="ai-raw" placeholder="Paste whatever you have — an email, a Slack message, a LinkedIn post, a URL with a few notes. Claude will pull out all the details automatically."></textarea>
+    <div class="fc-title">✨ Paste your opps — one at a time or several at once</div>
+    <div class="f full" style="margin-bottom:8px">
+      <label>Raw Info — separate multiple opps with a blank line or ---</label>
+      <textarea id="ai-raw" style="min-height:120px" placeholder="Paste one opp, or paste several separated by --- or a blank line between each one.&#10;&#10;Example:&#10;Google Summer of Code — open source stipend for students, $3000-$6600, rolling deadline, https://summerofcode.withgoogle.com&#10;&#10;---&#10;&#10;MLH Fellowship — 12-week remote program for students, paid, application deadline July 1, https://fellowship.mlh.io"></textarea>
     </div>
     <div class="status-bar" id="ai-status"></div>
   </div>
 
   <div class="acts">
-    <button class="btn btn-pink" id="ai-btn" onclick="aiGenerate()">✨ Generate Card</button>
-    <span style="font-size:13px;color:var(--text-soft)">— or —</span>
-    <button class="btn btn-outline" onclick="showManual()">📝 Enter manually</button>
+    <button class="btn btn-pink" id="ai-btn" onclick="aiGenerate()">✨ Generate Cards</button>
   </div>
 
-  <!-- MANUAL ENTRY (collapsed by default) -->
-  <div id="manual-wrap" style="display:none;margin-top:16px">
-    <div class="fc">
-      <div class="fc-title">📝 Manual Entry</div>
-      <div class="grid2">
-        <div class="f full"><label>Title *</label><input id="f-title" placeholder="e.g. Google Summer of Code 2026"></div>
-        <div class="f">
-          <label>Section</label>
-          <select id="f-cat">
-            <option value="technovation">⭐ Technovation Exclusive</option>
-            <option value="scholarships">🎓 Scholarships</option>
-            <option value="fellowships" selected>🌍 Fellowships & Research</option>
-            <option value="jobs">💼 Jobs & Career Platforms</option>
-            <option value="events">🏆 Events & Competitions</option>
-            <option value="courses">📚 Courses & Learning</option>
-            <option value="prodev">📈 Professional Development</option>
-            <option value="founders">🚀 Founders Hub</option>
-          </select>
-        </div>
-        <div class="f">
-          <label>Deadline Type</label>
-          <select id="f-deadline">
-            <option value="urgent">🔴 Urgent (≤2 weeks)</option>
-            <option value="soon">🟠 Soon (≤1 month)</option>
-            <option value="future">🟢 Future (1+ months)</option>
-            <option value="rolling" selected>🔵 Rolling</option>
-          </select>
-        </div>
-        <div class="f"><label>Deadline Text (pill)</label><input id="f-timing" placeholder="e.g. June 15, 2026"></div>
-        <div class="f">
-          <label>Location</label>
-          <select id="f-loc">
-            <option value="intl" selected>International</option>
-            <option value="us">US Only</option>
-            <option value="us-online">US + Online</option>
-          </select>
-        </div>
-        <div class="f">
-          <label>Who It's For</label>
-          <select id="f-personas" multiple size="5">
-            <option value="all" selected>All Alumnae</option>
-            <option value="secondary">High School</option>
-            <option value="university">University</option>
-            <option value="earlycareer">Early Career</option>
-            <option value="founder">Founder/Builder</option>
-          </select>
-        </div>
-        <div class="f">
-          <label>Badges</label>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--text)"><input type="checkbox" id="b-new" checked style="width:14px;height:14px;accent-color:var(--pink)"><span class="tb tb-new">NEW</span></label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--text)"><input type="checkbox" id="b-priority" checked style="width:14px;height:14px;accent-color:var(--pink)"><span class="tb tb-priority">PRIORITY</span></label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--text)"><input type="checkbox" id="b-urgent" style="width:14px;height:14px;accent-color:var(--pink)"><span class="tb tb-urgent">URGENT</span></label>
-          </div>
-        </div>
-        <div class="f full"><label>URL *</label><input id="f-url" placeholder="https://..."></div>
-        <div class="f full"><label>Button Label</label><input id="f-btn" value="Apply Now →"></div>
+  <!-- CARD QUEUE -->
+  <div id="card-queue" style="display:none;margin-top:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:14px;font-weight:600;color:var(--text)" id="queue-label">0 cards ready</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline" style="padding:7px 14px;font-size:13px" onclick="removeAllCards()">Clear all</button>
+        <button class="btn btn-green" id="push-all-btn" onclick="pushAllCards()">🚀 Push All to GitHub</button>
       </div>
-      <div class="drows" id="det-container">
-        <div class="drow">
-          <select class="emoji-sel"><option>📅</option><option>💰</option><option>📍</option><option>👥</option><option>💡</option><option>🌟</option><option>🌍</option><option>🚀</option></select>
-          <input placeholder="Label (e.g. Deadline)" class="det-label">
-          <input placeholder="Value (e.g. June 15, 2026)" class="det-val">
-          <button class="rm" onclick="this.parentElement.remove()">×</button>
+    </div>
+
+    <!-- push progress -->
+    <div id="push-all-panel" style="display:none;margin-bottom:16px">
+      <div class="push-panel">
+        <div class="push-steps" id="push-steps" style="display:flex">
+          <div class="step pending" id="s1"><div class="step-icon">1</div><span>Fetch index.html</span></div>
+          <div class="step pending" id="s2"><div class="step-icon">2</div><span>Insert all cards</span></div>
+          <div class="step pending" id="s3"><div class="step-icon">3</div><span>Commit & push</span></div>
+          <div class="step pending" id="s4"><div class="step-icon">4</div><span>GitHub Pages rebuilds (~30s)</span></div>
         </div>
+        <div class="push-status idle" id="push-status">Ready</div>
       </div>
-      <button class="add-row-btn" onclick="addRow()">+ Add row</button>
     </div>
-    <div class="acts" style="margin-bottom:4px">
-      <button class="btn btn-pink" onclick="manualGenerate()">Generate Card</button>
-      <button class="btn btn-outline" onclick="document.getElementById('manual-wrap').style.display='none'">Cancel</button>
-    </div>
+
+    <div id="cards-container"></div>
   </div>
 
-  <!-- PREVIEW + OUTPUT -->
-  <div id="card-output" style="display:none;margin-top:20px">
-    <!-- LIVE PREVIEW -->
-    <div class="preview-wrap">
-      <div class="preview-label">👁 Card Preview — how it will look on the page</div>
-      <div class="tah-item-prev" id="card-preview">
-        <div class="tah-row-prev" onclick="togglePreview()">
-          <div class="tah-title-prev" id="prev-title"></div>
-          <div class="tah-meta-prev">
-            <span class="tah-pill-prev" id="prev-pill"></span>
-            <div id="prev-badges"></div>
-          </div>
-          <span class="tah-chev-prev" id="prev-chev">▼</span>
-        </div>
-        <div class="tah-body-prev" id="prev-body">
-          <div class="tah-grid-prev" id="prev-details"></div>
-          <div class="tah-foot-prev">
-            <button class="tah-copy-prev">📋 Copy Link</button>
-            <a class="tah-btn-prev" id="prev-applylink" href="#" target="_blank"></a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- HTML OUTPUT -->
-    <div style="margin-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:600;color:var(--text-soft);letter-spacing:.05em;text-transform:uppercase">Generated HTML</div>
-        <button class="btn btn-outline" style="padding:5px 12px;font-size:12px" onclick="copyCode()">📋 Copy HTML</button>
-      </div>
-      <div class="code-box" id="output-code"></div>
-    </div>
-
-    <!-- PUSH PANEL -->
-    <div class="push-panel">
-      <div class="push-title">🚀 Push directly to GitHub Pages</div>
-      <div style="font-size:12.5px;color:#388e3c;margin-bottom:10px;line-height:1.5">
-        Fetches <code style="font-family:monospace;background:rgba(0,0,0,.07);padding:1px 4px;border-radius:3px">technovation-alumnae/alumnae-opps → index.html</code>, inserts the card into the right section, and commits. Live in ~30 seconds.
-      </div>
-      <div class="push-steps" id="push-steps">
-        <div class="step pending" id="s1"><div class="step-icon">1</div><span>Fetch current index.html from GitHub</span></div>
-        <div class="step pending" id="s2"><div class="step-icon">2</div><span>Insert card into section</span></div>
-        <div class="step pending" id="s3"><div class="step-icon">3</div><span>Commit & push to main</span></div>
-        <div class="step pending" id="s4"><div class="step-icon">4</div><span>GitHub Pages rebuilds (~30s)</span></div>
-      </div>
-      <div class="push-status idle" id="push-status">Ready to push</div>
-      <div class="acts" style="margin-top:10px">
-        <button class="btn btn-green" id="push-btn" onclick="doPush()">🚀 Push to GitHub</button>
-        <span class="flash ok" id="push-flash"></span>
-      </div>
-    </div>
-  </div>
 </div><!-- /pane-add -->
-
 
 <!-- ══════════════════════════════════════════
      TAB 2: CLEANUP (scan live page for expired/soon)
@@ -577,6 +491,7 @@ const SECTION_LABELS={
 // ════════════════════════════════════════════
 let generatedCode='', generatedCat='', generatedData={};
 let searchQueue=[];   // approved from search tab
+// cardQueue defined in CARD QUEUE section below
 let cleanupTitles=[]; // titles of cards to remove
 
 function buildBadges(deadline,loc,isNew,isPriority,isUrgent){
@@ -661,72 +576,60 @@ async function aiGenerate(){
   if(!raw){alert('Paste some info first.');return;}
   const btn=document.getElementById('ai-btn');
   const statusEl=document.getElementById('ai-status');
-  btn.disabled=true;btn.textContent='Generating...';
+  btn.disabled=true; btn.textContent='Generating...';
   statusEl.innerHTML=`<span class="spin"></span>Sending to Claude...`;
 
-  const prompt=`You are building a card for the Technovation Alumnae Opportunities Hub. Extract structured data and return ONLY valid JSON (no markdown, no backticks):
+  // Split into individual opps by --- or double newline
+  const chunks=raw.split(/\n---\n|\n\s*\n---\s*\n?|---\n/).map(s=>s.trim()).filter(s=>s.length>20);
+  const opps = chunks.length > 1 ? chunks : [raw];
 
-{"title":"Full opportunity title","section":"technovation|scholarships|fellowships|jobs|events|courses|prodev|founders","personas":"all|secondary|university|earlycareer|founder (space-separated, can combine e.g. \"university earlycareer\")","deadline_type":"rolling|soon|urgent|future","timing_text":"Short pill text","location":"intl|us|us-online","url":"https://...","button_label":"Apply Now →","details":[{"emoji":"📅","label":"Deadline","value":"..."},{"emoji":"💰","label":"Award","value":"..."},{"emoji":"📍","label":"Location","value":"..."},{"emoji":"👥","label":"Eligibility","value":"..."},{"emoji":"🌟","label":"Why it matters","value":"..."}]}
+  statusEl.innerHTML=`<span class="spin"></span>Generating ${opps.length} card${opps.length>1?'s':''}...`;
 
-Section rules — pick ONE:
-- technovation: hosted, created, or co-sponsored directly by Technovation (e.g. Technovation events, Technovation-run programs, exclusive alumnae programs)
-- scholarships: funding awarded for education
-- fellowships: fellowship, residency, research, or immersive programs
-- jobs: job boards, career platforms, open roles, internships
-- events: hackathons, competitions, conferences, pitch events
-- courses: online courses, bootcamps, certifications, learning programs
-- prodev: mentorship, networking, professional development, community membership
-- founders: grants, accelerators, pitch competitions, founder funding
+  const prompt=`You are building cards for the Technovation Alumnae Opportunities Hub. I will give you ${opps.length} opportunit${opps.length>1?'ies':'y'} separated by |||. For EACH one, extract structured data.
 
-Personas rules — pick ALL that apply (space-separated):
-- all: open to everyone with no age/stage restriction
-- secondary: high school students
-- university: college/university students
-- earlycareer: recent grads, early-career professionals
-- founder: entrepreneurs, startup founders, builders
-If genuinely open to all stages, use "all". Otherwise be specific.
+Return ONLY a valid JSON array with one object per opportunity (no markdown, no backticks):
+[{"title":"...","section":"technovation|scholarships|fellowships|jobs|events|courses|prodev|founders","personas":"all|secondary|university|earlycareer|founder (space-separated)","deadline_type":"rolling|soon|urgent|future","timing_text":"...","location":"intl|us|us-online","url":"https://...","button_label":"Apply Now →","details":[{"emoji":"📅","label":"Deadline","value":"..."},{"emoji":"💰","label":"Award","value":"..."},{"emoji":"📍","label":"Location","value":"..."},{"emoji":"👥","label":"Eligibility","value":"..."},{"emoji":"🌟","label":"Why it matters","value":"..."}]}]
 
-Deadline rules: urgent=closes within 2 weeks, soon=closes within 1 month, future=fixed date more than 1 month away, rolling=no fixed deadline.
-Location: intl=international/global, us=US-only, us-online=US with online option.
-Details: 3–5 rows, 1–2 sentences each. Only include rows you have info for.
-Button label: "Apply Now →" for applications, "Learn More →" for info pages, "View Roles →" for job boards, "Enroll →" for courses, "Register →" for events.
+Section rules: technovation=hosted/created by Technovation, scholarships=education funding, fellowships=fellowship/residency/research, jobs=job boards/open roles/internships, events=hackathons/competitions/conferences, courses=online courses/bootcamps/certifications, prodev=mentorship/networking/professional dev, founders=grants/accelerators/pitch competitions.
+Personas: all=no restriction, secondary=high school, university=college, earlycareer=recent grads/early professionals, founder=entrepreneurs. Space-separated for multiple.
+Deadline: urgent=≤2wk, soon=≤1mo, future=fixed 1+mo away, rolling=no deadline.
+Location: intl=global, us=US-only, us-online=US+online.
+Details: 3-5 rows only, 1-2 sentences each.
+Button: "Apply Now →" for apps, "Learn More →" for info, "View Roles →" for jobs, "Enroll →" for courses, "Register →" for events.
 
-Raw info:\n${raw}`;
+Opportunities (separated by |||):
+${opps.join('\n|||\n')}`;
 
   try{
-    const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+    });
     const data=await res.json();
-    if(!data.content){
-      const errMsg=data.error?.message||JSON.stringify(data);
-      throw new Error('API error: '+errMsg);
-    }
+    if(!data.content){throw new Error(data.error?.message||JSON.stringify(data));}
     const text=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
-    const p=JSON.parse(text);
-    const cat=p.section||'fellowships';
-    const personas=p.personas||'all';
-    const details=p.details||[];
-    const cardHtml=buildCardHTML(p.title||'Untitled',cat,p.deadline_type||'rolling',p.timing_text||'Rolling',p.location||'intl',personas,p.url||'#',p.button_label||'Apply Now →',details,true,true,false);
-    generatedCode=cardHtml;
-    generatedCat=cat;
-    generatedData={title:p.title,deadline:p.deadline_type,timing:p.timing_text,loc:p.location,personas,url:p.url,btnLabel:p.button_label,details,isNew:true,isPriority:true,isUrgent:false};
-    // Show what was auto-detected
-    const sectionNames={technovation:'⭐ Technovation Exclusive',scholarships:'🎓 Scholarships',fellowships:'🌍 Fellowships',jobs:'💼 Jobs',events:'🏆 Events',courses:'📚 Courses',prodev:'📈 Pro Dev',founders:'🚀 Founders Hub'};
+    const arrStart=text.indexOf('['); const arrEnd=text.lastIndexOf(']');
+    if(arrStart===-1)throw new Error('No results returned');
+    const results=JSON.parse(text.slice(arrStart,arrEnd+1));
+
+    results.forEach(p=>{
+      const details=p.details||[];
+      const cardHtml=buildCardHTML(p.title||'Untitled',p.section||'fellowships',p.deadline_type||'rolling',p.timing_text||'Rolling',p.location||'intl',p.personas||'all',p.url||'#',p.button_label||'Apply Now →',details,true,true,false);
+      const cardData={title:p.title,section:p.section||'fellowships',deadline:p.deadline_type||'rolling',timing:p.timing_text,loc:p.location||'intl',personas:p.personas||'all',url:p.url,btnLabel:p.button_label,details,html:cardHtml};
+      addToQueue(cardData);
+      addToHistory(p.title||'Untitled',p.section||'fellowships',p.deadline_type||'rolling',p.location||'intl',cardHtml);
+    });
+
+    document.getElementById('ai-raw').value='';
+    statusEl.innerHTML=`✅ ${results.length} card${results.length>1?'s':''} added to queue`;
     statusEl.style.fontStyle='normal';
-    statusEl.innerHTML=`✅ Done! Placed in <strong>${sectionNames[cat]||cat}</strong> · Personas: <strong>${personas}</strong>`;
-    document.getElementById('output-code').textContent=cardHtml;
-    renderPreview(generatedData);
-    document.getElementById('card-output').style.display='block';
-    document.getElementById('push-steps').style.display='flex';
-    setPS('idle','Ready to push');resetSteps('s');
-    // status already set above
-    document.getElementById('card-output').scrollIntoView({behavior:'smooth'});
-    addToHistory(p.title||'Untitled',cat,p.deadline_type||'rolling',p.location||'intl',cardHtml);
   }catch(e){
     statusEl.innerHTML='❌ '+e.message;
     statusEl.style.fontStyle='normal';
-    console.error('Full error:',e);
+    console.error(e);
   }
-  btn.disabled=false;btn.textContent='✨ Generate Card';
+  btn.disabled=false; btn.textContent='✨ Generate Cards';
 }
 
 // ════════════════════════════════════════════
@@ -1190,6 +1093,134 @@ async function doSearchPush(){
   }catch(e){
     resetSteps('sp');setSearchPS('fail','❌ '+e.message);
     btn.disabled=false;console.error(e);
+  }
+}
+
+// ════════════════════════════════════════════
+// CARD QUEUE
+// ════════════════════════════════════════════
+let cardQueue=[];
+
+const SECTION_NAMES={
+  technovation:'⭐ Technovation Exclusive',scholarships:'🎓 Scholarships',fellowships:'🌍 Fellowships',
+  jobs:'💼 Jobs',events:'🏆 Events',courses:'📚 Courses',prodev:'📈 Pro Dev',founders:'🚀 Founders Hub'
+};
+
+function addToQueue(cardData){
+  const id='card-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+  cardQueue.push({id,...cardData});
+  renderQueueCard({id,...cardData});
+  updateQueueHeader();
+  document.getElementById('card-queue').style.display='block';
+  document.getElementById('push-all-panel').style.display='block';
+}
+
+function renderQueueCard(card){
+  const container=document.getElementById('cards-container');
+  const {cls,txt}=buildPill(card.deadline,card.timing);
+  const div=document.createElement('div');
+  div.className='queue-card'; div.id=card.id;
+  div.innerHTML=`
+    <div class="queue-card-header" onclick="toggleQueueCard('${card.id}')">
+      <div class="queue-card-left">
+        <span class="section-tag">${SECTION_NAMES[card.section]||card.section}</span>
+        <span class="queue-card-title">${esc(card.title)}</span>
+      </div>
+      <div class="queue-card-meta">
+        <span class="tah-pill-prev pill-${cls}">${esc(txt)}</span>
+        ${buildBadges(card.deadline,card.loc,true,true,false)}
+      </div>
+      <span style="font-size:11px;color:var(--muted);margin-left:6px">&#9660;</span>
+    </div>
+    <div class="queue-card-body open" id="body-${card.id}">
+      <div class="queue-card-details">
+        ${(card.details||[]).map(d=>`<div class="queue-card-detail"><span>${d.emoji||'💡'}</span><span><strong>${esc(d.label)}:</strong> ${esc(d.value)}</span></div>`).join('')}
+      </div>
+      <div class="queue-card-foot">
+        <a href="${esc(card.url)}" target="_blank" class="btn btn-outline" style="font-size:12px;padding:6px 12px;text-decoration:none">${esc(card.btnLabel||'Apply Now →')}</a>
+        <button class="queue-rm-btn" onclick="removeFromQueue('${card.id}')">✕ Remove</button>
+      </div>
+    </div>`;
+  container.appendChild(div);
+}
+
+function toggleQueueCard(id){
+  const body=document.getElementById('body-'+id);
+  if(body)body.classList.toggle('open');
+}
+
+function removeFromQueue(id){
+  cardQueue=cardQueue.filter(c=>c.id!==id);
+  const el=document.getElementById(id);
+  if(el)el.remove();
+  updateQueueHeader();
+  if(!cardQueue.length){
+    document.getElementById('card-queue').style.display='none';
+    document.getElementById('push-all-panel').style.display='none';
+  }
+}
+
+function removeAllCards(){
+  cardQueue=[];
+  document.getElementById('cards-container').innerHTML='';
+  document.getElementById('card-queue').style.display='none';
+  document.getElementById('push-all-panel').style.display='none';
+}
+
+function updateQueueHeader(){
+  const n=cardQueue.length;
+  document.getElementById('queue-label').textContent=n+' card'+(n!==1?'s':'')+' ready to push';
+}
+
+async function pushAllCards(){
+  if(!getGH()){alert('Add your GitHub token in Settings.');switchTab('settings');return;}
+  if(!cardQueue.length){alert('No cards in queue.');return;}
+  const btn=document.getElementById('push-all-btn');
+  btn.disabled=true;
+  document.getElementById('push-all-panel').style.display='block';
+  resetSteps('s');
+  document.getElementById('push-all-panel').scrollIntoView({behavior:'smooth'});
+
+  try{
+    setStep('s1','working'); setPS('working','Fetching index.html...');
+    const file=await ghFetch(getFilepath());
+    const sha=file.sha;
+    let content=atob(file.content.replace(/\n/g,''));
+    setStep('s1','done');
+
+    setStep('s2','working'); setPS('working',`Inserting ${cardQueue.length} card(s)...`);
+    for(const card of cardQueue){
+      const anchor=SECTION_ANCHORS[card.section]||SECTION_ANCHORS['fellowships'];
+      const idx=content.indexOf(anchor);
+      if(idx===-1){console.warn('Section not found:',card.section);continue;}
+      const h2End=content.indexOf('</h2>',idx);
+      if(h2End===-1)continue;
+      content=content.slice(0,h2End+5)+'\n\n'+card.html+'\n'+content.slice(h2End+5);
+    }
+    setStep('s2','done');
+
+    setStep('s3','working'); setPS('working','Committing...');
+    const titles=cardQueue.map(c=>c.title).join(', ');
+    const msg=`Add ${cardQueue.length} opp${cardQueue.length>1?'s':''}: ${titles.slice(0,80)} [Admin Tool]`;
+    await ghPut(getFilepath(),content,sha,msg);
+    setStep('s3','done');
+
+    setStep('s4','done'); setPS('done','✅ Pushed! Live in ~30 seconds.');
+    btn.textContent='✅ Pushed!';
+    // Clear queue after successful push
+    setTimeout(()=>{
+      removeAllCards();
+      btn.textContent='🚀 Push All to GitHub';
+      btn.disabled=false;
+      resetSteps('s');
+      setPS('idle','Ready');
+      document.getElementById('push-all-panel').style.display='none';
+    },4000);
+  }catch(e){
+    setStep('s1','fail');
+    setPS('fail','❌ '+e.message);
+    btn.disabled=false;
+    console.error(e);
   }
 }
 
