@@ -540,6 +540,20 @@ function buildCardHTML(title,cat,deadline,timing,loc,personas,url,btnLabel,detai
     </div>`;
 }
 
+// Strip emojis from card HTML before storing/pushing
+function stripEmojisFromHTML(str){
+  return str
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27FF}]/gu, '')
+    .replace(/[\u{2B00}-\u{2BFF}]/gu, '')
+    .replace(/[\u{FE00}-\u{FEFF}]/gu, '')
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')
+    .replace(/&#1[0-9]{4};/g, '')
+    .replace(/&#[2-9][0-9]{4};/g, '')
+    .replace(/&#11088;/g, '')
+    .replace(/  +/g, ' ');
+}
+
 // ════════════════════════════════════════════
 // CARD PREVIEW
 // ════════════════════════════════════════════
@@ -617,6 +631,7 @@ ${opps.join('\n|||\n')}`;
       const details=p.details||[];
       const cardHtml=buildCardHTML(p.title||'Untitled',p.section||'fellowships',p.deadline_type||'rolling',p.timing_text||'Rolling',p.location||'intl',p.personas||'all',p.url||'#',p.button_label||'Apply Now →',details,true,true,false);
       const cardData={title:p.title,section:p.section||'fellowships',deadline:p.deadline_type||'rolling',timing:p.timing_text,loc:p.location||'intl',personas:p.personas||'all',url:p.url,btnLabel:p.button_label,details,html:cardHtml};
+      cardData.html = stripEmojisFromHTML(cardData.html);
       addToQueue(cardData);
       addToHistory(p.title||'Untitled',p.section||'fellowships',p.deadline_type||'rolling',p.location||'intl',cardHtml);
     });
@@ -1155,7 +1170,7 @@ function renderQueueCard(card){
     </div>
     <div class="queue-card-body open" id="body-${card.id}">
       <div class="queue-card-details">
-        ${(card.details||[]).map(d=>`<div class="queue-card-detail"><span>${d.emoji||'💡'}</span><span><strong>${esc(d.label)}:</strong> ${esc(d.value)}</span></div>`).join('')}
+        ${(card.details||[]).map(d=>`<div class="queue-card-detail"><span></span><span><strong>${esc(d.label)}:</strong> ${esc(d.value)}</span></div>`).join('')}
       </div>
       <div class="queue-card-foot">
         <a href="${esc(card.url)}" target="_blank" class="btn btn-outline" style="font-size:12px;padding:6px 12px;text-decoration:none">${esc(card.btnLabel||'Apply Now →')}</a>
