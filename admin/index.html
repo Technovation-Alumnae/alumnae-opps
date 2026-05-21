@@ -489,10 +489,9 @@ select[multiple]{height:auto}
         <input type="password" id="s-github" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="saveSettings()">
         <div style="font-size:11.5px;color:var(--text-soft);margin-top:3px">Needs <code style="font-family:monospace">repo</code> scope · <a href="https://github.com/settings/tokens/new" target="_blank" style="color:var(--pink)">Create one →</a></div>
       </div>
-      <div class="f full">
-        <label>Anthropic API Key</label>
-        <input type="password" id="s-anthropic" placeholder="sk-ant-xxxxxxxxxxxxxxxxxxxx" oninput="saveSettings()">
-        <div style="font-size:11.5px;color:var(--text-soft);margin-top:3px">Used for AI card generation & search · <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--pink)">Get yours →</a></div>
+      <div class="f full" style="background:var(--green-light);border-radius:8px;padding:10px 12px">
+        <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">✅ Anthropic API — connected via Cloudflare Worker</div>
+        <div style="font-size:12px;color:var(--text-soft)">Your API key is stored securely in your Cloudflare Worker. No key needed here.</div>
       </div>
     </div>
     <div id="keys-status" style="font-size:12.5px;color:var(--text-soft);margin-top:12px"></div>
@@ -523,21 +522,19 @@ function loadSettings(){
 }
 function saveSettings(){
   localStorage.setItem('gh_token', document.getElementById('s-github').value.trim());
-  localStorage.setItem('ant_key',  document.getElementById('s-anthropic').value.trim());
   localStorage.setItem('repo',     document.getElementById('s-repo').value.trim());
   localStorage.setItem('branch',   document.getElementById('s-branch').value.trim());
   localStorage.setItem('filepath', document.getElementById('s-filepath').value.trim());
   checkKeyStatus();
 }
 function checkKeyStatus(){
-  const gh=localStorage.getItem('gh_token')||'', ant=localStorage.getItem('ant_key')||'';
+  const gh=localStorage.getItem('gh_token')||'';
   const el=document.getElementById('keys-status');
-  if(gh&&ant){el.textContent='✅ Both keys saved — ready to go';el.style.color='var(--green)';}
-  else if(!gh&&!ant){el.textContent='No keys saved yet';el.style.color='var(--text-soft)';}
-  else{el.textContent=(gh?'✅ GitHub':'❌ GitHub missing')+' · '+(ant?'✅ Anthropic':'❌ Anthropic missing');el.style.color='var(--orange)';}
+  if(gh){el.textContent='✅ GitHub token saved · ✅ Anthropic connected via Worker';el.style.color='var(--green)';}
+  else{el.textContent='❌ GitHub token missing — add it above';el.style.color='var(--orange)';}
 }
 const getGH=()=>localStorage.getItem('gh_token')||'';
-const getANT=()=>localStorage.getItem('ant_key')||'';
+const getANT=()=>'via-worker'; // API key handled by Cloudflare Worker
 const getRepo=()=>localStorage.getItem('repo')||'technovation-alumnae/alumnae-opps';
 const getBranch=()=>localStorage.getItem('branch')||'main';
 const getFilepath=()=>localStorage.getItem('filepath')||'index.html';
@@ -662,8 +659,6 @@ function renderPreview(data){
 async function aiGenerate(){
   const raw=document.getElementById('ai-raw').value.trim();
   if(!raw){alert('Paste some info first.');return;}
-  const ant=getANT();
-  if(!ant){alert('Add your Anthropic API key in ⚙️ Settings first.');switchTab('settings');return;}
   const btn=document.getElementById('ai-btn');
   const statusEl=document.getElementById('ai-status');
   btn.disabled=true;btn.textContent='Generating...';
@@ -699,7 +694,7 @@ Button label: "Apply Now →" for applications, "Learn More →" for info pages,
 Raw info:\n${raw}`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     const text=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
     const p=JSON.parse(text);
@@ -860,8 +855,6 @@ async function doPush(){
 // ════════════════════════════════════════════
 let scannedCards=[];
 async function scanPage(){
-  const ant=getANT();
-  if(!ant){alert('Add your Anthropic API key in ⚙️ Settings.');switchTab('settings');return;}
   const btn=document.getElementById('scan-btn');
   const statusEl=document.getElementById('scan-status');
   btn.disabled=true;
@@ -891,7 +884,7 @@ ${found.map(f=>`- "${f.title}" | deadline_type: ${f.deadline} | timing: "${f.tim
 
 Status rules: "expired" = the deadline has clearly passed (specific past date). "soon" = deadline within 14 days from today. "ok" = rolling, future, or no issue. Be conservative — only mark expired if the date is definitely past.`;
 
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const r=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const d=await r.json();
     const text=d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
     scannedCards=JSON.parse(text);
@@ -1057,7 +1050,7 @@ Personas: all=no restriction, secondary=high school, university=college students
 Only include opps you are confident are real and currently active. Include accurate URLs.`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:3000,
