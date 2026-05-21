@@ -696,6 +696,10 @@ Raw info:\n${raw}`;
   try{
     const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
+    if(!data.content){
+      const errMsg=data.error?.message||JSON.stringify(data);
+      throw new Error('API error: '+errMsg);
+    }
     const text=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
     const p=JSON.parse(text);
     const cat=p.section||'fellowships';
@@ -717,7 +721,11 @@ Raw info:\n${raw}`;
     // status already set above
     document.getElementById('card-output').scrollIntoView({behavior:'smooth'});
     addToHistory(p.title||'Untitled',cat,p.deadline_type||'rolling',p.location||'intl',cardHtml);
-  }catch(e){statusEl.innerHTML='❌ Error: '+e.message;console.error(e);}
+  }catch(e){
+    statusEl.innerHTML='❌ '+e.message;
+    statusEl.style.fontStyle='normal';
+    console.error('Full error:',e);
+  }
   btn.disabled=false;btn.textContent='✨ Generate Card';
 }
 
@@ -886,6 +894,10 @@ Status rules: "expired" = the deadline has clearly passed (specific past date). 
 
     const r=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const d=await r.json();
+    if(!d.content){
+      const errMsg=d.error?.message||JSON.stringify(d);
+      throw new Error('API error: '+errMsg);
+    }
     const text=d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
     scannedCards=JSON.parse(text);
 
@@ -900,7 +912,11 @@ Status rules: "expired" = the deadline has clearly passed (specific past date). 
     document.getElementById('cleanup-results').style.display='block';
     statusEl.innerHTML=`✅ Scanned ${scannedCards.length} cards — ${expiredCount} expired found`;
     statusEl.style.fontStyle='normal';
-  }catch(e){statusEl.innerHTML='❌ '+e.message;console.error(e);}
+  }catch(e){
+    statusEl.innerHTML='❌ '+e.message;
+    statusEl.style.fontStyle='normal';
+    console.error('Full error:',e);
+  }
   btn.disabled=false;
 }
 
@@ -1059,6 +1075,10 @@ Only include opps you are confident are real and currently active. Include accur
       })
     });
     const d=await res.json();
+    if(!d.content){
+      const errMsg=d.error?.message||JSON.stringify(d);
+      throw new Error('API error: '+errMsg);
+    }
     // Find the text block (could be after tool_use blocks)
     let text='';
     for(const block of d.content||[]){if(block.type==='text')text+=block.text;}
@@ -1073,7 +1093,11 @@ Only include opps you are confident are real and currently active. Include accur
     statusEl.innerHTML=`✅ Found ${searchResults.length} opportunities`;
     statusEl.style.fontStyle='normal';
     document.getElementById('search-results').scrollIntoView({behavior:'smooth'});
-  }catch(e){statusEl.innerHTML='❌ '+e.message;console.error(e);}
+  }catch(e){
+    statusEl.innerHTML='❌ '+e.message;
+    statusEl.style.fontStyle='normal';
+    console.error('Full error:',e);
+  }
   btn.disabled=false;btn.textContent='🔍 Search & Generate';
 }
 
