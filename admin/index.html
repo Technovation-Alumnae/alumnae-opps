@@ -694,7 +694,7 @@ Button label: "Apply Now →" for applications, "Learn More →" for info pages,
 Raw info:\n${raw}`;
 
   try{
-    const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     if(!data.content){
       const errMsg=data.error?.message||JSON.stringify(data);
@@ -892,7 +892,7 @@ ${found.map(f=>`- "${f.title}" | deadline_type: ${f.deadline} | timing: "${f.tim
 
 Status rules: "expired" = the deadline has clearly passed (specific past date). "soon" = deadline within 14 days from today. "ok" = rolling, future, or no issue. Be conservative — only mark expired if the date is definitely past.`;
 
-    const r=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const r=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const d=await r.json();
     if(!d.content){
       const errMsg=d.error?.message||JSON.stringify(d);
@@ -1069,7 +1069,7 @@ Only include opps you are confident are real and currently active. Include accur
     const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:3000,
+        model:'claude-sonnet-4-5',max_tokens:3000,
         tools:[{"type":"web_search_20250305","name":"web_search"}],
         messages:[{role:'user',content:prompt}]
       })
