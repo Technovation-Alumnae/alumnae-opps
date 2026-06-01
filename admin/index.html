@@ -336,7 +336,7 @@ select[multiple]{height:auto}
     <div class="grid2">
       <div class="f full">
         <label>What to search for</label>
-        <textarea id="search-prompt" style="min-height:60px" placeholder="e.g. 'new fellowships for women in AI and tech launching this summer' or 'scholarships for high school girls in STEM closing in the next 60 days' or 'hackathons open to international students in 2026'"></textarea>
+        <textarea id="search-prompt" style="min-height:60px" placeholder="e.g. 'new fellowships for women in AI and tech launching this summer' or 'scholarships for high school girls in STEM closing in the next 60 days' or 'hackathons open to international students in 2026'">fellowships, scholarships, programs, events, and career opportunities for women in tech — mix of deadline types (urgent, soon, rolling)</textarea>
       </div>
 
       <div class="f">
@@ -428,7 +428,6 @@ select[multiple]{height:auto}
 // ════════════════════════════════════════════
 function loadSettings(){
   document.getElementById('s-github').value    = localStorage.getItem('gh_token')||'';
-  document.getElementById('s-anthropic').value = localStorage.getItem('ant_key')||'';
   document.getElementById('s-repo').value      = localStorage.getItem('repo')||'technovation-alumnae/alumnae-opps';
   document.getElementById('s-branch').value    = localStorage.getItem('branch')||'main';
   document.getElementById('s-filepath').value  = localStorage.getItem('filepath')||'index.html';
@@ -717,6 +716,12 @@ async function ghPut(path,content,sha,message){
   return r.json();
 }
 
+// ── Update "Last Updated" date on the live page ──
+function injectUpdatedDate(content){
+  const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  return content.replace(/<span class="tah-updated">[^<]*<\/span>/,`<span class="tah-updated">Last Updated: ${today}</span>`);
+}
+
 function setStep(id,state){
   const el=document.getElementById(id);if(!el)return;
   el.className='step '+state;
@@ -762,7 +767,8 @@ async function doPush(){
     const h2End=current.indexOf('</h2>',idx);
     if(h2End===-1)throw new Error('Could not find </h2> after section');
     const insertAt=h2End+5;
-    const newContent=current.slice(0,insertAt)+'\n\n'+generatedCode+'\n'+current.slice(insertAt);
+    let newContent=current.slice(0,insertAt)+'\n\n'+generatedCode+'\n'+current.slice(insertAt);
+    newContent=injectUpdatedDate(newContent);
     setStep('s2','done');
 
     setStep('s3','working');setPS('working','Committing…');
@@ -960,6 +966,7 @@ async function doCleanupPush(){
     });
     setStep('cs2','done');
 
+    content=injectUpdatedDate(content);
     setStep('cs3','working');setCSP('working','Committing…');
     await ghPut(getFilepath(),content,sha,`Remove expired opps: ${toRemove.join(', ')} [Cleanup Tool]`);
     setStep('cs3','done');
@@ -992,17 +999,25 @@ async function doSearch(){
   const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   const prompt=`Today is ${today}. Find ${count} real, currently-active opportunities matching this request: "${userPrompt}"
 
-These are for Technovation alumnae — women and girls who participated in a global tech/entrepreneurship program. Prioritize:
-- Opportunities open to women / underrepresented groups in tech
-- Real programs with verifiable URLs
-- A mix of deadlines (urgent, soon, future, rolling)
+These are for Technovation alumnae — a global community of women and girls who completed a tech entrepreneurship program. They range from high school students to early-career professionals and startup founders. Prioritize:
+- Opportunities open to women and/or underrepresented groups in tech
+- Real programs with verifiable, working URLs — verify each URL is live before including
+- A mix of deadline types (urgent, soon, future, rolling)
+- Programs relevant to students, early-career women, or women founders in tech
 
-Return ONLY a JSON array of ${count} items (no markdown):
+IMPORTANT — do NOT return:
+- Opportunities with deadlines that have already passed (today is ${today})
+- Well-known evergreen platforms already on the Technovation Alumnae Hub (e.g. Tech Ladies, Handshake, Idealist, Wellfound, Diversify Tech, 80000 Hours, Tech Jobs for Good)
+- Generic job boards with no specific program structure
+- Opportunities limited to one company's employees
+- Anything you are not confident is currently active and accepting applications
+
+Return ONLY a JSON array of ${count} items (no markdown, no commentary):
 [{"title":"...","section":"scholarships|fellowships|jobs|events|courses|prodev|founders","personas":"all|secondary|university|earlycareer|founder (space-separated)","deadline_type":"rolling|soon|urgent|future","timing_text":"...","location":"intl|us|us-online","url":"https://...","button_label":"Apply Now →","details":[{"emoji":"📅","label":"Deadline","value":"..."},{"emoji":"💰","label":"Award","value":"..."},{"emoji":"👥","label":"Eligibility","value":"..."},{"emoji":"🌟","label":"Why it matters","value":"..."}]}]
 
 Section rules: scholarships=education funding, fellowships=fellowship/residency/research programs, jobs=job boards/open roles/internships, events=hackathons/competitions/conferences, courses=online courses/bootcamps/certifications, prodev=mentorship/networking/professional dev, founders=grants/accelerators/pitch competitions.
 Personas: all=no restriction, secondary=high school, university=college students, earlycareer=recent grads/early professionals, founder=entrepreneurs. Use space-separated for multiple.
-Only include opps you are confident are real and currently active. Include accurate URLs.`;
+Only return opps you are confident are real, currently open, and have working URLs.`;
 
   try{
     const res=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{method:'POST',
@@ -1116,6 +1131,7 @@ async function doSearchPush(){
     }
     setStep('sp2','done');
 
+    content=injectUpdatedDate(content);
     setStep('sp3','working');setSearchPS('working','Committing…');
     const titles=searchQueue.map(q=>q.title).join(', ');
     await ghPut(getFilepath(),content,sha,`Add opps: ${titles.slice(0,80)} [Search Tool]`);
