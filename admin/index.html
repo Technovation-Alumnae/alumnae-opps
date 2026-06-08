@@ -287,8 +287,10 @@ select[multiple]{height:auto}
      TAB 2: CLEANUP (scan live page for expired/soon)
 ════════════════════════════════════════════ -->
 <div id="pane-cleanup" class="pane">
+
+  <!-- ── PANEL 1: Scan & remove expired cards ── -->
   <div class="fc">
-    <div class="fc-title">🗑️ Scan live page for expired & time-sensitive cards</div>
+    <div class="fc-title">🗑️ Scan live page for expired &amp; time-sensitive cards</div>
     <p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin-bottom:14px">
       Claude fetches your live page, reads every card's deadline, and flags ones that are expired, closing soon, or need a badge update. Check the ones to remove, then push in one click.
     </p>
@@ -311,16 +313,61 @@ select[multiple]{height:auto}
       <div class="push-steps" id="cleanup-push-steps">
         <div class="step pending" id="cs1"><div class="step-icon">1</div><span>Fetch index.html</span></div>
         <div class="step pending" id="cs2"><div class="step-icon">2</div><span>Remove selected cards</span></div>
-        <div class="step pending" id="cs3"><div class="step-icon">3</div><span>Commit & push</span></div>
+        <div class="step pending" id="cs3"><div class="step-icon">3</div><span>Commit &amp; push</span></div>
         <div class="step pending" id="cs4"><div class="step-icon">4</div><span>GitHub Pages rebuilds</span></div>
       </div>
       <div class="push-status idle" id="cleanup-push-status">Select cards above, then push</div>
       <div class="acts" style="margin-top:10px">
-        <button class="btn btn-red" id="cleanup-push-btn" onclick="doCleanupPush()">🗑️ Remove & Push</button>
+        <button class="btn btn-red" id="cleanup-push-btn" onclick="doCleanupPush()">🗑️ Remove &amp; Push</button>
         <span class="flash ok" id="cleanup-flash"></span>
       </div>
     </div>
   </div>
+
+  <!-- ── PANEL 2: Fix garbled characters ── -->
+  <div class="fc" style="margin-top:16px">
+    <div class="fc-title">🧹 Fix garbled characters</div>
+    <p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin-bottom:14px">
+      Scans <code style="background:var(--warm-bg);padding:1px 5px;border-radius:4px;font-size:12px">index.html</code> for triple-encoding artifacts (Ã°ÂÂÂ, â, ÃÂÃÂ·, etc.) and replaces them with correct Unicode, then pushes the fix.
+    </p>
+    <div class="acts">
+      <button class="btn btn-outline" id="charfix-preview-btn" onclick="charFixPreview()">🔍 Preview</button>
+      <button class="btn btn-orange" id="charfix-push-btn" onclick="charFixPush()">✨ Fix &amp; Push</button>
+      <div class="status-bar" id="charfix-status"></div>
+    </div>
+  </div>
+
+  <!-- ── PANEL 3: Natural-language card editor ── -->
+  <div class="fc" style="margin-top:16px">
+    <div class="fc-title">✏️ Natural language edit</div>
+    <p style="font-size:13px;color:var(--text-soft);line-height:1.6;margin-bottom:10px">
+      Describe any change in plain English — badge swap, deadline update, card removal, wording fix. Claude edits the live page and queues a push for your review.
+    </p>
+    <!-- example chips -->
+    <div id="nle-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+    <!-- textarea + run button -->
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <textarea id="nle-instruction" rows="2" placeholder="e.g. Change the WITS badge from SOON to URGENT&#10;e.g. Update Generation Google deadline to August 14&#10;e.g. Remove the iD Tech card" style="flex:1;min-height:64px"></textarea>
+      <button class="btn btn-pink" id="nle-run-btn" onclick="nleRun()" style="align-self:flex-end;white-space:nowrap">Apply <span id="nle-spin" class="spin" style="display:none"></span></button>
+    </div>
+    <!-- result log -->
+    <div id="nle-log" style="display:none;margin-top:10px;background:var(--warm-bg);border:1px solid var(--warm-border);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.7;color:var(--text)"></div>
+    <!-- push row -->
+    <div id="nle-push-row" style="display:none;margin-top:10px">
+      <div class="push-steps" id="nle-push-steps" style="display:flex">
+        <div class="step pending" id="nle-s1"><div class="step-icon">1</div><span>Fetch index.html</span></div>
+        <div class="step pending" id="nle-s2"><div class="step-icon">2</div><span>Apply edit</span></div>
+        <div class="step pending" id="nle-s3"><div class="step-icon">3</div><span>Commit &amp; push</span></div>
+        <div class="step pending" id="nle-s4"><div class="step-icon">4</div><span>GitHub Pages rebuilds</span></div>
+      </div>
+      <div class="push-status idle" id="nle-push-status">Edit ready — review above then push</div>
+      <div class="acts" style="margin-top:10px">
+        <button class="btn btn-pink" id="nle-push-btn" onclick="nlePush()">🚀 Push edit to GitHub</button>
+        <span class="flash ok" id="nle-flash"></span>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /pane-cleanup -->
 
 
@@ -1304,6 +1351,230 @@ function recopyHistory(i){
   navigator.clipboard.writeText(history[i].code).then(()=>alert('Copied to clipboard!'));
 }
 function clearHistory(){history=[];renderHistory();}
+
+// ════════════════════════════════════════════
+// CHARACTER FIX
+// ════════════════════════════════════════════
+const CHAR_MAP=[
+  // Emoji triple-encoding artifacts
+  ['\u00C3\u00B0\u00C2\u00C2\u00C2T','\uD83D\uDCCC'],
+  ['\u00C3\u00B0\u00C2\u00C2\u00C2T','\uD83C\uDF1F'],
+  ['\u00C3\u00B0\u00C2\u00C2\u00C2\u00B0','\uD83D\uDD25'],
+  ['\u00C3\u00B0\u00C2\u00C2\u00C2\u00A5','\uD83D\uDCA5'],
+  ['\u00C3\u00B0\u00C2\u00C2\u00C2','\uD83D\uDCC5'],
+  // Double-encoded em dash and quotes
+  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u2014','\u2014'],
+  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u2019',"'"],
+  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u0153','\u201C'],
+  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u00A2','\u2022'],
+  ['\u00C3\u00A2\u00C2\u0086\u00C2\u2019','\u2192'],
+  // Single-level garbled smart quotes/dashes
+  ['\u00E2\u20AC\u2122',"'"],
+  ['\u00E2\u20AC\u201D','\u2014'],
+  ['\u00E2\u20AC\u0153','\u201C'],
+  ['\u00E2\u20AC\u2019','\u201D'],
+  ['\u00E2\u2020\u2019','\u2192'],
+  // MPOWER separator artifacts
+  ['\u00C3\u0082\u00C3\u0082\u00C3\u0082\u00C3\u0082\u00B7','\u00B7'],
+  ['\u00C3\u0082\u00C3\u0082\u00B7','\u00B7'],
+  ['\u00C3\u00B7','\u00F7'],
+  ['\u00C2\u00B7','\u00B7'],
+  ['\u00C2\u00BB','\u00BB'],
+  ['\u00C2\u00AB','\u00AB'],
+  ['\u00C2\u00B0','\u00B0'],
+  ['\u00C2\u00AE','\u00AE'],
+  ['\u00C2\u00A9','\u00A9'],
+  ['\u00C2\u00A3','\u00A3'],
+  ['\u00C2\u20AC','\u20AC'],
+  ['\u00C2\u00BD','\u00BD'],
+];
+
+function applyCharFixes(html){
+  let out=html;
+  let count=0;
+  // Sort longest-first so no partial matches
+  const sorted=[...CHAR_MAP].sort((a,b)=>b[0].length-a[0].length);
+  sorted.forEach(([bad,good])=>{
+    const re=new RegExp(bad.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
+    const prev=out;
+    out=out.replace(re,good);
+    if(out!==prev)count++;
+  });
+  return{html:out,count};
+}
+
+function setCharStatus(msg,type){
+  const el=document.getElementById('charfix-status');
+  el.innerHTML=msg;
+  el.style.fontStyle=type==='working'?'italic':'normal';
+  el.style.color=type==='err'?'var(--red)':type==='ok'?'var(--green)':'var(--text-soft)';
+}
+
+async function charFixPreview(){
+  setCharStatus('<span class="spin"></span>Fetching…','working');
+  document.getElementById('charfix-preview-btn').disabled=true;
+  try{
+    const file=await ghFetch(getFilepath());
+    const html=atob(file.content.replace(/\n/g,''));
+    const {count}=applyCharFixes(html);
+    if(count===0) setCharStatus('✅ No garbled characters found — page looks clean.','ok');
+    else setCharStatus(`Found ${count} encoding pattern(s). Click Fix & Push to apply.`,'working');
+  }catch(e){setCharStatus('❌ '+e.message,'err');}
+  document.getElementById('charfix-preview-btn').disabled=false;
+}
+
+async function charFixPush(){
+  if(!getGH()){alert('Add your GitHub token in ⚙️ Settings.');switchTab('settings');return;}
+  setCharStatus('<span class="spin"></span>Fetching index.html…','working');
+  document.getElementById('charfix-push-btn').disabled=true;
+  try{
+    const file=await ghFetch(getFilepath());
+    const sha=file.sha;
+    const html=atob(file.content.replace(/\n/g,''));
+    const {html:fixed,count}=applyCharFixes(html);
+    if(count===0){setCharStatus('✅ Nothing to fix — page already clean.','ok');document.getElementById('charfix-push-btn').disabled=false;return;}
+    setCharStatus(`<span class="spin"></span>Pushing ${count} fix(es)…`,'working');
+    const withDate=injectUpdatedDate(fixed);
+    await ghPut(getFilepath(),withDate,sha,`fix: resolve ${count} encoding artifact(s) [Cleanup Tool]`);
+    setCharStatus(`✅ Fixed ${count} pattern(s) and pushed. GitHub Pages rebuilding (~30s).`,'ok');
+    document.getElementById('charfix-push-btn').textContent='✅ Fixed!';
+    setTimeout(()=>{document.getElementById('charfix-push-btn').textContent='✨ Fix & Push';document.getElementById('charfix-push-btn').disabled=false;},5000);
+  }catch(e){setCharStatus('❌ '+e.message,'err');document.getElementById('charfix-push-btn').disabled=false;}
+}
+
+// ════════════════════════════════════════════
+// NATURAL LANGUAGE EDITOR
+// ════════════════════════════════════════════
+const NLE_EXAMPLES=[
+  'Change WITS badge from SOON to URGENT',
+  'Update Generation Google deadline to August 14',
+  'Remove the iD Tech card',
+  'Add NEW badge to ACM-W scholarship',
+  'Change "Lead, Speak, Mentor" deadline text to Ongoing',
+  'Update Special Prize Judging deadline to June 10',
+];
+let nlePendingHTML=null;
+let nlePendingSHA=null;
+
+(function buildNLEChips(){
+  const wrap=document.getElementById('nle-chips');
+  if(!wrap)return;
+  NLE_EXAMPLES.forEach(text=>{
+    const btn=document.createElement('button');
+    btn.className='btn btn-outline';
+    btn.style.cssText='padding:4px 10px;font-size:11.5px;border-radius:20px';
+    btn.textContent=text;
+    btn.onclick=()=>{document.getElementById('nle-instruction').value=text;};
+    wrap.appendChild(btn);
+  });
+})();
+
+function setNLELog(html){
+  const el=document.getElementById('nle-log');
+  el.innerHTML=html;el.style.display='block';
+}
+
+async function nleRun(){
+  const instruction=document.getElementById('nle-instruction').value.trim();
+  if(!instruction){setNLELog('<span style="color:var(--red)">Please enter an instruction first.</span>');return;}
+  if(!getGH()){alert('Add your GitHub token in ⚙️ Settings.');switchTab('settings');return;}
+
+  const runBtn=document.getElementById('nle-run-btn');
+  const spin=document.getElementById('nle-spin');
+  runBtn.disabled=true;spin.style.display='inline-block';
+  document.getElementById('nle-push-row').style.display='none';
+  nlePendingHTML=null;nlePendingSHA=null;
+  resetSteps('nle-s');
+  document.getElementById('nle-push-status').className='push-status idle';
+  document.getElementById('nle-push-status').textContent='Edit ready — review above then push';
+
+  setNLELog('<span style="color:var(--text-soft);font-style:italic"><span class="spin"></span> Fetching index.html…</span>');
+
+  try{
+    setStep('nle-s1','working');
+    const file=await ghFetch(getFilepath());
+    const sha=file.sha;
+    const html=atob(file.content.replace(/\n/g,''));
+    setStep('nle-s1','done');
+
+    setNLELog('<span style="color:var(--text-soft);font-style:italic"><span class="spin"></span> Sending to Claude for edit…</span>');
+    setStep('nle-s2','working');
+
+    const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    const systemPrompt=`You are a precise HTML editor for the Technovation Alumnae Opportunities Hub.
+
+Apply exactly the edit the user describes. Return ONLY the complete modified HTML — no preamble, no explanation, no markdown fences.
+
+Rules:
+- Badge classes: tb-urgent (≤2 weeks), tb-soon (≤1 month), tb-future (1+ months), tb-rolling (ongoing), tb-new, tb-priority, tb-loc
+- Deadline text is in the .tah-deadline span inside .tah-row
+- Badge pills are <span class="tah-pill tb-XXX"> elements
+- To remove a card: delete the entire <div class="tah-item"> … </div> block
+- Do NOT change any other HTML
+- Update "Last Updated:" to today: ${today}
+
+Return ONLY the complete HTML file.`;
+
+    const r=await fetch('https://soft-cake-b8ce.brionnalomax.workers.dev',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-5',
+        max_tokens:8192,
+        system:systemPrompt,
+        messages:[{role:'user',content:`Instruction: ${instruction}\n\n---HTML---\n${html}`}]
+      })
+    });
+    const d=await r.json();
+    if(!d.content){throw new Error(d.error?.message||JSON.stringify(d));}
+    let edited=d.content.map(b=>b.text||'').join('').replace(/^```html?\n?/i,'').replace(/\n?```$/,'').trim();
+
+    // Count changed lines for display
+    const oLines=html.split('\n'),nLines=edited.split('\n');
+    let changed=0;
+    for(let i=0;i<Math.max(oLines.length,nLines.length);i++){if(oLines[i]!==nLines[i])changed++;}
+
+    nlePendingHTML=edited;nlePendingSHA=sha;
+    setStep('nle-s2','done');
+
+    setNLELog(`<strong style="color:var(--green)">✅ Edit applied</strong><br>
+      <span style="color:var(--text-soft);font-size:12px">Instruction: <em>${esc(instruction)}</em></span><br>
+      <span style="color:var(--text-soft);font-size:11.5px">~${changed} line(s) changed · Review, then push below</span>`);
+
+    document.getElementById('nle-push-row').style.display='block';
+    document.getElementById('nle-push-steps').style.display='flex';
+
+  }catch(e){
+    resetSteps('nle-s');
+    setNLELog(`<span style="color:var(--red)">❌ ${esc(e.message)}</span>`);
+    console.error(e);
+  }
+  runBtn.disabled=false;spin.style.display='none';
+}
+
+async function nlePush(){
+  if(!nlePendingHTML||!nlePendingSHA)return;
+  const btn=document.getElementById('nle-push-btn');
+  btn.disabled=true;
+  const statusEl=document.getElementById('nle-push-status');
+  statusEl.className='push-status working';
+  statusEl.innerHTML='<span class="spin"></span>Committing…';
+  setStep('nle-s3','working');
+  try{
+    const instruction=document.getElementById('nle-instruction').value.trim().slice(0,72);
+    await ghPut(getFilepath(),nlePendingHTML,nlePendingSHA,`edit: ${instruction} [NL Edit Tool]`);
+    setStep('nle-s3','done');setStep('nle-s4','done');
+    statusEl.className='push-status done';statusEl.textContent='✅ Pushed! Live in ~30 seconds.';
+    const f=document.getElementById('nle-flash');f.textContent='✅ Done!';f.classList.add('show');setTimeout(()=>f.classList.remove('show'),4000);
+    btn.textContent='✅ Pushed!';
+    nlePendingHTML=null;nlePendingSHA=null;
+    setTimeout(()=>{btn.textContent='🚀 Push edit to GitHub';btn.disabled=false;},5000);
+  }catch(e){
+    resetSteps('nle-s');
+    statusEl.className='push-status fail';statusEl.textContent='❌ '+e.message;
+    btn.disabled=false;console.error(e);
+  }
+}
 
 // ════════════════════════════════════════════
 // INIT
