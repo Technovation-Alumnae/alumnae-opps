@@ -1355,52 +1355,67 @@ function clearHistory(){history=[];renderHistory();}
 // ════════════════════════════════════════════
 // CHARACTER FIX
 // ════════════════════════════════════════════
-const CHAR_MAP=[
-  // Emoji triple-encoding artifacts
-  ['\u00C3\u00B0\u00C2\u00C2\u00C2T','\uD83D\uDCCC'],
-  ['\u00C3\u00B0\u00C2\u00C2\u00C2T','\uD83C\uDF1F'],
-  ['\u00C3\u00B0\u00C2\u00C2\u00C2\u00B0','\uD83D\uDD25'],
-  ['\u00C3\u00B0\u00C2\u00C2\u00C2\u00A5','\uD83D\uDCA5'],
-  ['\u00C3\u00B0\u00C2\u00C2\u00C2','\uD83D\uDCC5'],
-  // Double-encoded em dash and quotes
-  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u2014','\u2014'],
-  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u2019',"'"],
-  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u0153','\u201C'],
-  ['\u00C3\u00A2\u00C2\u20AC\u00C2\u00A2','\u2022'],
-  ['\u00C3\u00A2\u00C2\u0086\u00C2\u2019','\u2192'],
-  // Single-level garbled smart quotes/dashes
-  ['\u00E2\u20AC\u2122',"'"],
-  ['\u00E2\u20AC\u201D','\u2014'],
-  ['\u00E2\u20AC\u0153','\u201C'],
-  ['\u00E2\u20AC\u2019','\u201D'],
-  ['\u00E2\u2020\u2019','\u2192'],
-  // MPOWER separator artifacts
-  ['\u00C3\u0082\u00C3\u0082\u00C3\u0082\u00C3\u0082\u00B7','\u00B7'],
-  ['\u00C3\u0082\u00C3\u0082\u00B7','\u00B7'],
-  ['\u00C3\u00B7','\u00F7'],
-  ['\u00C2\u00B7','\u00B7'],
-  ['\u00C2\u00BB','\u00BB'],
-  ['\u00C2\u00AB','\u00AB'],
-  ['\u00C2\u00B0','\u00B0'],
-  ['\u00C2\u00AE','\u00AE'],
-  ['\u00C2\u00A9','\u00A9'],
-  ['\u00C2\u00A3','\u00A3'],
-  ['\u00C2\u20AC','\u20AC'],
-  ['\u00C2\u00BD','\u00BD'],
-];
-
+// ── Smart encoding fixer ──
+// Iteratively decodes latin-1 misinterpretation chains (handles double AND triple encoding).
+// Works on the raw HTML string: each pass re-encodes as latin-1 bytes then decodes as UTF-8.
+// Stops when the string stabilises or a decode error is hit, then does a final
+// targeted sweep for any leftover Â/Ã noise that survived (common with mixed-depth pages).
 function applyCharFixes(html){
-  let out=html;
-  let count=0;
-  // Sort longest-first so no partial matches
-  const sorted=[...CHAR_MAP].sort((a,b)=>b[0].length-a[0].length);
-  sorted.forEach(([bad,good])=>{
-    const re=new RegExp(bad.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
-    const prev=out;
-    out=out.replace(re,good);
-    if(out!==prev)count++;
+  // Step 1: iterative latin-1 → UTF-8 decode (fixes double + triple encoding in one shot)
+  function iterativeDecode(str){
+    let current = str;
+    for(let i=0;i<4;i++){
+      // Encode the JS string back to latin-1 bytes, then decode as UTF-8
+      try{
+        const bytes = new Uint8Array(current.length);
+        let canEncode = true;
+        for(let j=0;j<current.length;j++){
+          const c = current.charCodeAt(j);
+          if(c > 255){ canEncode=false; break; }
+          bytes[j] = c;
+        }
+        if(!canEncode) break;
+        const decoded = new TextDecoder('utf-8',{fatal:true}).decode(bytes);
+        if(decoded === current) break; // stable
+        current = decoded;
+      }catch(e){
+        break; // invalid UTF-8 sequence — stop here
+      }
+    }
+    return current;
+  }
+
+  // Step 2: apply iterative decode to every text node / attribute value
+  // We operate on the full HTML string but skip tag internals to avoid
+  // mangling class names and attribute syntax — process text between tags
+  // and inside quoted attribute values separately.
+  let fixed = html;
+
+  // Fix text content between tags
+  fixed = fixed.replace(/>([^<]+)</g, function(match, text){
+    const decoded = iterativeDecode(text);
+    return '>' + decoded + '<';
   });
-  return{html:out,count};
+
+  // Fix quoted attribute values (title, placeholder, data-* etc.)
+  fixed = fixed.replace(/=("([^"]*)")/g, function(match, quoted, inner){
+    const decoded = iterativeDecode(inner);
+    return '="' + decoded + '"';
+  });
+
+  // Step 3: final sweep — remove any leftover stray Â (common artifact of
+  // mixed-depth encoding where only the Â got stranded)
+  fixed = fixed.replace(/Â(?=\s|[A-Za-z<])/g, '');
+  // Clean up zero-width / non-breaking space artifacts from encoding noise
+  fixed = fixed.replace(/Â /g, ' '); // double-encoded nbsp → real nbsp
+
+  // Count changes
+  let count = 0;
+  const origLines = html.split('\n'), newLines = fixed.split('\n');
+  for(let i=0;i<Math.max(origLines.length,newLines.length);i++){
+    if(origLines[i]!==newLines[i]) count++;
+  }
+  return {html: fixed, count};
 }
 
 function setCharStatus(msg,type){
